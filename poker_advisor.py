@@ -317,10 +317,10 @@ class PokerAdvisorApp:
                     continue
 
                 btn = ui.Button()
-                btn.title = rank
+                btn.title = f"{rank}\n{symbol}"
                 btn.background_color = 'white'
                 btn.tint_color = color
-                btn.font = ('<system-bold>', 22)
+                btn.font = ('<system-bold>', 18)
                 btn.corner_radius = 5
                 btn.frame = (60 + rank_idx*50, y_start + suit_idx*70, card_size, card_size)
 
