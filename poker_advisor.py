@@ -1,11 +1,11 @@
 """
 Poker Strategy Advisor - Main Application
-Pythonista 3 optimized UI for iPad
+Pythonista 3 optimized UI for iPad - SIMPLIFIED VERSION
 """
 
 import ui
 import random
-from poker_evaluator import Card, HandEvaluator, parse_card
+from poker_evaluator import Card, HandEvaluator
 from equity_calculator import EquityCalculator
 from strategy_engine import StrategyEngine
 
@@ -19,411 +19,386 @@ class PokerAdvisorApp:
         # Game state
         self.hole_cards = []
         self.community_cards = []
-        self.position = 'BTN'  # Default position
+        self.position = 'BTN'
         self.num_opponents = 3
         self.street = 'preflop'
         self.facing_bet = False
-
-        # Card selection state
-        self.selecting_for = None  # 'hole1', 'hole2', 'flop1', 'flop2', 'flop3', 'turn', 'river'
         self.used_cards = set()
 
         # UI components
         self.main_view = None
-        self.card_selector_view = None
+        self.build_ui()
 
-        # Build UI
-        self.build_main_ui()
-
-    def build_main_ui(self):
-        """Build the main game interface"""
+    def build_ui(self):
+        """Build the main interface"""
+        # Create main view with adaptive sizing
         self.main_view = ui.View()
-        self.main_view.name = 'Poker Strategy Advisor'
-        self.main_view.background_color = '#1a472a'  # Poker table green
+        self.main_view.name = 'Poker Advisor'
+        self.main_view.background_color = '#1a472a'
 
-        # Screen dimensions
-        width = 768
-        height = 1024
+        # Use device width/height
+        w = min(ui.get_screen_size()[0], 800)
+        h = ui.get_screen_size()[1]
+        self.main_view.frame = (0, 0, w, h)
 
-        y_offset = 20
+        # Create scrollview for content
+        scroll = ui.ScrollView()
+        scroll.frame = (0, 0, w, h)
+        scroll.background_color = '#1a472a'
+        self.main_view.add_subview(scroll)
+
+        y = 10
 
         # Title
         title = ui.Label()
-        title.text = '♠️ POKER STRATEGY ADVISOR ♥️'
-        title.font = ('<system-bold>', 24)
+        title.text = '♠️ POKER ADVISOR ♥️'
+        title.font = ('<system-bold>', 28)
         title.text_color = 'white'
         title.alignment = ui.ALIGN_CENTER
-        title.frame = (0, y_offset, width, 40)
-        self.main_view.add_subview(title)
-        y_offset += 50
+        title.frame = (0, y, w, 50)
+        scroll.add_subview(title)
+        y += 60
 
-        # Position and opponents section
-        info_frame = ui.View()
-        info_frame.background_color = '#0d2818'
-        info_frame.frame = (10, y_offset, width-20, 80)
-        info_frame.corner_radius = 10
-        self.main_view.add_subview(info_frame)
+        # === GAME INFO SECTION ===
+        info_bg = ui.View()
+        info_bg.background_color = '#0d2818'
+        info_bg.corner_radius = 10
+        info_bg.frame = (10, y, w-20, 120)
+        scroll.add_subview(info_bg)
 
-        # Position selector
-        pos_label = ui.Label()
-        pos_label.text = 'Position:'
-        pos_label.font = ('<system>', 16)
-        pos_label.text_color = 'white'
-        pos_label.frame = (10, 10, 100, 30)
-        info_frame.add_subview(pos_label)
+        # Position
+        pos_lbl = ui.Label(frame=(10, 10, 100, 30))
+        pos_lbl.text = 'Position:'
+        pos_lbl.text_color = 'white'
+        pos_lbl.font = ('<system>', 16)
+        info_bg.add_subview(pos_lbl)
 
-        self.position_btn = ui.Button()
+        self.position_btn = ui.Button(frame=(120, 10, 100, 40))
         self.position_btn.title = self.position
-        self.position_btn.font = ('<system-bold>', 18)
         self.position_btn.background_color = '#d4af37'
         self.position_btn.tint_color = 'black'
+        self.position_btn.font = ('<system-bold>', 20)
         self.position_btn.corner_radius = 8
-        self.position_btn.frame = (110, 10, 100, 30)
         self.position_btn.action = self.cycle_position
-        info_frame.add_subview(self.position_btn)
+        info_bg.add_subview(self.position_btn)
 
-        # Opponents counter
-        opp_label = ui.Label()
-        opp_label.text = 'Opponents:'
-        opp_label.font = ('<system>', 16)
-        opp_label.text_color = 'white'
-        opp_label.frame = (220, 10, 120, 30)
-        info_frame.add_subview(opp_label)
+        # Opponents
+        opp_lbl = ui.Label(frame=(240, 10, 120, 30))
+        opp_lbl.text = 'Opponents:'
+        opp_lbl.text_color = 'white'
+        opp_lbl.font = ('<system>', 16)
+        info_bg.add_subview(opp_lbl)
 
-        self.opp_count_label = ui.Label()
-        self.opp_count_label.text = str(self.num_opponents)
-        self.opp_count_label.font = ('<system-bold>', 24)
-        self.opp_count_label.text_color = '#d4af37'
-        self.opp_count_label.alignment = ui.ALIGN_CENTER
-        self.opp_count_label.frame = (340, 5, 50, 40)
-        info_frame.add_subview(self.opp_count_label)
+        self.opp_label = ui.Label(frame=(370, 10, 60, 40))
+        self.opp_label.text = str(self.num_opponents)
+        self.opp_label.text_color = '#d4af37'
+        self.opp_label.font = ('<system-bold>', 28)
+        self.opp_label.alignment = ui.ALIGN_CENTER
+        info_bg.add_subview(self.opp_label)
 
-        # Opponent +/- buttons
-        opp_minus = ui.Button()
-        opp_minus.title = '-'
-        opp_minus.font = ('<system-bold>', 24)
-        opp_minus.background_color = '#8b0000'
-        opp_minus.tint_color = 'white'
-        opp_minus.corner_radius = 8
-        opp_minus.frame = (400, 10, 40, 30)
-        opp_minus.action = lambda sender: self.adjust_opponents(-1)
-        info_frame.add_subview(opp_minus)
+        btn_minus = ui.Button(frame=(440, 10, 50, 40))
+        btn_minus.title = '-'
+        btn_minus.background_color = '#8b0000'
+        btn_minus.tint_color = 'white'
+        btn_minus.font = ('<system-bold>', 24)
+        btn_minus.corner_radius = 8
+        btn_minus.action = lambda s: self.adjust_opponents(-1)
+        info_bg.add_subview(btn_minus)
 
-        opp_plus = ui.Button()
-        opp_plus.title = '+'
-        opp_plus.font = ('<system-bold>', 24)
-        opp_plus.background_color = '#006400'
-        opp_plus.tint_color = 'white'
-        opp_plus.corner_radius = 8
-        opp_plus.frame = (450, 10, 40, 30)
-        opp_plus.action = lambda sender: self.adjust_opponents(1)
-        info_frame.add_subview(opp_plus)
+        btn_plus = ui.Button(frame=(500, 10, 50, 40))
+        btn_plus.title = '+'
+        btn_plus.background_color = '#006400'
+        btn_plus.tint_color = 'white'
+        btn_plus.font = ('<system-bold>', 24)
+        btn_plus.corner_radius = 8
+        btn_plus.action = lambda s: self.adjust_opponents(1)
+        info_bg.add_subview(btn_plus)
 
-        # Street indicator
-        self.street_label = ui.Label()
+        # Street
+        self.street_label = ui.Label(frame=(10, 60, w-40, 30))
         self.street_label.text = '🎴 PRE-FLOP'
-        self.street_label.font = ('<system-bold>', 18)
         self.street_label.text_color = '#d4af37'
+        self.street_label.font = ('<system-bold>', 20)
         self.street_label.alignment = ui.ALIGN_CENTER
-        self.street_label.frame = (500, 10, 250, 30)
-        info_frame.add_subview(self.street_label)
+        info_bg.add_subview(self.street_label)
 
-        # Facing bet toggle
-        bet_label = ui.Label()
-        bet_label.text = 'Facing Bet:'
-        bet_label.font = ('<system>', 14)
-        bet_label.text_color = 'white'
-        bet_label.frame = (10, 50, 100, 20)
-        info_frame.add_subview(bet_label)
+        # Facing bet
+        bet_lbl = ui.Label(frame=(10, 95, 120, 20))
+        bet_lbl.text = 'Facing Bet?'
+        bet_lbl.text_color = 'white'
+        bet_lbl.font = ('<system>', 14)
+        info_bg.add_subview(bet_lbl)
 
-        self.bet_switch = ui.Switch()
+        self.bet_switch = ui.Switch(frame=(140, 90, 60, 30))
         self.bet_switch.value = False
-        self.bet_switch.frame = (110, 45, 60, 30)
         self.bet_switch.action = self.toggle_facing_bet
-        info_frame.add_subview(self.bet_switch)
+        info_bg.add_subview(self.bet_switch)
 
-        y_offset += 90
+        y += 130
 
-        # Hole cards section
-        hole_section = ui.Label()
-        hole_section.text = 'YOUR HOLE CARDS'
-        hole_section.font = ('<system-bold>', 18)
-        hole_section.text_color = '#d4af37'
-        hole_section.alignment = ui.ALIGN_CENTER
-        hole_section.frame = (0, y_offset, width, 30)
-        self.main_view.add_subview(hole_section)
-        y_offset += 35
+        # === HOLE CARDS ===
+        hole_lbl = ui.Label(frame=(0, y, w, 30))
+        hole_lbl.text = 'YOUR HOLE CARDS'
+        hole_lbl.text_color = '#d4af37'
+        hole_lbl.font = ('<system-bold>', 20)
+        hole_lbl.alignment = ui.ALIGN_CENTER
+        scroll.add_subview(hole_lbl)
+        y += 35
 
         # Hole card buttons
-        card_width = 100
-        card_height = 140
+        self.hole_btns = []
+        card_w = 120
+        card_h = 160
         spacing = 20
-        start_x = (width - (2 * card_width + spacing)) / 2
+        start_x = (w - (2*card_w + spacing)) / 2
 
-        self.hole_card_btns = []
         for i in range(2):
             btn = ui.Button()
             btn.title = '?'
-            btn.font = ('<system-bold>', 48)
             btn.background_color = 'white'
             btn.tint_color = 'black'
+            btn.font = ('<system-bold>', 56)
             btn.corner_radius = 10
-            btn.border_width = 2
+            btn.border_width = 3
             btn.border_color = '#d4af37'
-            btn.frame = (start_x + i * (card_width + spacing), y_offset, card_width, card_height)
-            btn.action = lambda sender, idx=i: self.select_hole_card(idx)
-            self.main_view.add_subview(btn)
-            self.hole_card_btns.append(btn)
+            btn.frame = (start_x + i*(card_w+spacing), y, card_w, card_h)
+            btn.action = lambda s, idx=i: self.select_hole_card(idx)
+            scroll.add_subview(btn)
+            self.hole_btns.append(btn)
 
-        y_offset += card_height + 20
+        y += card_h + 20
 
-        # Community cards section
-        comm_label = ui.Label()
-        comm_label.text = 'COMMUNITY CARDS'
-        comm_label.font = ('<system-bold>', 18)
-        comm_label.text_color = '#d4af37'
-        comm_label.alignment = ui.ALIGN_CENTER
-        comm_label.frame = (0, y_offset, width, 30)
-        self.main_view.add_subview(comm_label)
-        y_offset += 35
+        # === COMMUNITY CARDS ===
+        comm_lbl = ui.Label(frame=(0, y, w, 30))
+        comm_lbl.text = 'COMMUNITY CARDS'
+        comm_lbl.text_color = '#d4af37'
+        comm_lbl.font = ('<system-bold>', 20)
+        comm_lbl.alignment = ui.ALIGN_CENTER
+        scroll.add_subview(comm_lbl)
+        y += 35
 
-        # Community card buttons (flop, turn, river)
-        comm_card_width = 80
-        comm_card_height = 110
-        comm_spacing = 15
-        comm_start_x = (width - (5 * comm_card_width + 4 * comm_spacing)) / 2
+        # Community card buttons
+        self.comm_btns = []
+        comm_w = 90
+        comm_h = 120
+        comm_spacing = 10
+        comm_start = (w - (5*comm_w + 4*comm_spacing)) / 2
 
-        self.comm_card_btns = []
         for i in range(5):
             btn = ui.Button()
             btn.title = '?'
-            btn.font = ('<system-bold>', 36)
             btn.background_color = 'white'
             btn.tint_color = 'gray'
+            btn.font = ('<system-bold>', 42)
             btn.corner_radius = 8
             btn.border_width = 2
             btn.border_color = 'gray'
-            btn.frame = (comm_start_x + i * (comm_card_width + comm_spacing), y_offset, comm_card_width, comm_card_height)
-            btn.action = lambda sender, idx=i: self.select_community_card(idx)
-            self.main_view.add_subview(btn)
-            self.comm_card_btns.append(btn)
+            btn.frame = (comm_start + i*(comm_w+comm_spacing), y, comm_w, comm_h)
+            btn.action = lambda s, idx=i: self.select_comm_card(idx)
+            scroll.add_subview(btn)
+            self.comm_btns.append(btn)
 
-        y_offset += comm_card_height + 20
+        y += comm_h + 20
 
-        # Analysis section
-        analysis_frame = ui.View()
-        analysis_frame.background_color = '#0d2818'
-        analysis_frame.frame = (10, y_offset, width-20, 250)
-        analysis_frame.corner_radius = 10
-        self.main_view.add_subview(analysis_frame)
+        # === ANALYSIS SECTION ===
+        analysis_bg = ui.View()
+        analysis_bg.background_color = '#0d2818'
+        analysis_bg.corner_radius = 10
+        analysis_bg.frame = (10, y, w-20, 280)
+        scroll.add_subview(analysis_bg)
 
-        # Equity display
-        equity_label = ui.Label()
-        equity_label.text = 'WIN PROBABILITY'
-        equity_label.font = ('<system-bold>', 16)
-        equity_label.text_color = 'white'
-        equity_label.alignment = ui.ALIGN_CENTER
-        equity_label.frame = (0, 10, width-20, 25)
-        analysis_frame.add_subview(equity_label)
+        # Equity
+        eq_lbl = ui.Label(frame=(0, 10, w-20, 25))
+        eq_lbl.text = 'WIN PROBABILITY'
+        eq_lbl.text_color = 'white'
+        eq_lbl.font = ('<system-bold>', 18)
+        eq_lbl.alignment = ui.ALIGN_CENTER
+        analysis_bg.add_subview(eq_lbl)
 
-        self.equity_display = ui.Label()
-        self.equity_display.text = '--%'
-        self.equity_display.font = ('<system-bold>', 48)
-        self.equity_display.text_color = '#00ff00'
-        self.equity_display.alignment = ui.ALIGN_CENTER
-        self.equity_display.frame = (0, 35, width-20, 60)
-        analysis_frame.add_subview(self.equity_display)
+        self.equity_label = ui.Label(frame=(0, 40, w-20, 70))
+        self.equity_label.text = '--%'
+        self.equity_label.text_color = '#00ff00'
+        self.equity_label.font = ('<system-bold>', 60)
+        self.equity_label.alignment = ui.ALIGN_CENTER
+        analysis_bg.add_subview(self.equity_label)
 
         # Hand strength
-        self.hand_strength_label = ui.Label()
-        self.hand_strength_label.text = 'No hand yet'
-        self.hand_strength_label.font = ('<system-bold>', 20)
-        self.hand_strength_label.text_color = 'white'
-        self.hand_strength_label.alignment = ui.ALIGN_CENTER
-        self.hand_strength_label.frame = (0, 100, width-20, 30)
-        analysis_frame.add_subview(self.hand_strength_label)
+        self.hand_label = ui.Label(frame=(0, 115, w-20, 30))
+        self.hand_label.text = 'Select your cards'
+        self.hand_label.text_color = 'white'
+        self.hand_label.font = ('<system-bold>', 18)
+        self.hand_label.alignment = ui.ALIGN_CENTER
+        analysis_bg.add_subview(self.hand_label)
 
         # Recommendation
-        rec_label = ui.Label()
-        rec_label.text = 'RECOMMENDATION'
-        rec_label.font = ('<system-bold>', 16)
-        rec_label.text_color = '#d4af37'
-        rec_label.alignment = ui.ALIGN_CENTER
-        rec_label.frame = (0, 140, width-20, 25)
-        analysis_frame.add_subview(rec_label)
+        rec_title = ui.Label(frame=(0, 155, w-20, 25))
+        rec_title.text = 'RECOMMENDATION'
+        rec_title.text_color = '#d4af37'
+        rec_title.font = ('<system-bold>', 16)
+        rec_title.alignment = ui.ALIGN_CENTER
+        analysis_bg.add_subview(rec_title)
 
-        self.recommendation_label = ui.Label()
-        self.recommendation_label.text = 'Select your hole cards to begin'
-        self.recommendation_label.font = ('<system-bold>', 24)
-        self.recommendation_label.text_color = '#ff6600'
-        self.recommendation_label.alignment = ui.ALIGN_CENTER
-        self.recommendation_label.number_of_lines = 0
-        self.recommendation_label.frame = (10, 165, width-40, 80)
-        analysis_frame.add_subview(self.recommendation_label)
+        self.rec_label = ui.Label(frame=(10, 185, w-40, 90))
+        self.rec_label.text = 'Input your hole cards'
+        self.rec_label.text_color = '#ff6600'
+        self.rec_label.font = ('<system-bold>', 26)
+        self.rec_label.alignment = ui.ALIGN_CENTER
+        self.rec_label.number_of_lines = 0
+        analysis_bg.add_subview(self.rec_label)
 
-        y_offset += 260
+        y += 290
 
-        # Action buttons
-        btn_width = (width - 40) / 2
-        btn_height = 50
+        # === BUTTONS ===
+        btn_w = (w - 30) / 2
 
-        # Settings button
-        settings_btn = ui.Button()
-        settings_btn.title = '⚙️ Opponent Settings'
-        settings_btn.font = ('<system-bold>', 18)
+        settings_btn = ui.Button(frame=(10, y, btn_w, 60))
+        settings_btn.title = '⚙️ Settings'
         settings_btn.background_color = '#4a4a4a'
         settings_btn.tint_color = 'white'
+        settings_btn.font = ('<system-bold>', 20)
         settings_btn.corner_radius = 10
-        settings_btn.frame = (10, y_offset, btn_width - 5, btn_height)
         settings_btn.action = self.show_settings
-        self.main_view.add_subview(settings_btn)
+        scroll.add_subview(settings_btn)
 
-        # New hand button
-        new_hand_btn = ui.Button()
-        new_hand_btn.title = '🔄 New Hand'
-        new_hand_btn.font = ('<system-bold>', 18)
-        new_hand_btn.background_color = '#006400'
-        new_hand_btn.tint_color = 'white'
-        new_hand_btn.corner_radius = 10
-        new_hand_btn.frame = (btn_width + 15, y_offset, btn_width - 5, btn_height)
-        new_hand_btn.action = self.new_hand
-        self.main_view.add_subview(new_hand_btn)
+        new_btn = ui.Button(frame=(20 + btn_w, y, btn_w, 60))
+        new_btn.title = '🔄 New Hand'
+        new_btn.background_color = '#006400'
+        new_btn.tint_color = 'white'
+        new_btn.font = ('<system-bold>', 20)
+        new_btn.corner_radius = 10
+        new_btn.action = self.new_hand
+        scroll.add_subview(new_btn)
+
+        y += 70
+
+        # Set scroll content size
+        scroll.content_size = (w, y + 20)
 
     def build_card_selector(self, callback):
-        """Build card selection grid"""
-        self.card_selector_view = ui.View()
-        self.card_selector_view.name = 'Select Card'
-        self.card_selector_view.background_color = '#1a472a'
+        """Build card selection popup"""
+        v = ui.View()
+        v.name = 'Select Card'
+        v.background_color = '#1a472a'
 
-        width = 768
-        height = 1024
+        w = 700
+        h = 400
+        v.frame = (0, 0, w, h)
 
         # Title
-        title = ui.Label()
-        title.text = 'SELECT CARD'
-        title.font = ('<system-bold>', 24)
+        title = ui.Label(frame=(0, 10, w, 40))
+        title.text = 'TAP A CARD'
         title.text_color = 'white'
+        title.font = ('<system-bold>', 24)
         title.alignment = ui.ALIGN_CENTER
-        title.frame = (0, 20, width, 40)
-        self.card_selector_view.add_subview(title)
+        v.add_subview(title)
 
         # Card grid
         ranks = list(Card.RANKS)
         suits = ['♥️', '♦️', '♣️', '♠️']
-        suit_colors = ['red', 'red', 'black', 'black']
         suit_chars = ['h', 'd', 'c', 's']
+        suit_colors = ['red', 'red', 'black', 'black']
 
-        card_size = 55
-        spacing = 3
-        start_y = 80
+        card_size = 50
+        y_start = 60
 
-        for suit_idx, (suit_symbol, suit_char, color) in enumerate(zip(suits, suit_chars, suit_colors)):
+        for suit_idx, (symbol, char, color) in enumerate(zip(suits, suit_chars, suit_colors)):
             # Suit label
-            suit_label = ui.Label()
-            suit_label.text = suit_symbol
-            suit_label.font = ('<system>', 32)
-            suit_label.text_color = color
-            suit_label.alignment = ui.ALIGN_CENTER
-            suit_label.frame = (10, start_y + suit_idx * (card_size + 50), 50, 40)
-            self.card_selector_view.add_subview(suit_label)
+            lbl = ui.Label(frame=(10, y_start + suit_idx*70, 40, 50))
+            lbl.text = symbol
+            lbl.text_color = color
+            lbl.font = ('<system>', 36)
+            lbl.alignment = ui.ALIGN_CENTER
+            v.add_subview(lbl)
 
+            # Cards
             for rank_idx, rank in enumerate(ranks):
-                card = Card(rank, suit_char)
-
-                # Skip if card already used
+                card = Card(rank, char)
                 if card in self.used_cards:
                     continue
 
                 btn = ui.Button()
                 btn.title = rank
-                btn.font = ('<system-bold>', 24)
                 btn.background_color = 'white'
                 btn.tint_color = color
+                btn.font = ('<system-bold>', 22)
                 btn.corner_radius = 5
-                btn.frame = (
-                    70 + rank_idx * (card_size + spacing),
-                    start_y + suit_idx * (card_size + 50),
-                    card_size,
-                    card_size
-                )
+                btn.frame = (60 + rank_idx*50, y_start + suit_idx*70, card_size, card_size)
 
-                # Create closure to capture card
                 def make_action(c):
-                    return lambda sender: callback(c)
+                    return lambda s: callback(c)
 
                 btn.action = make_action(card)
-                self.card_selector_view.add_subview(btn)
+                v.add_subview(btn)
 
-        # Cancel button
-        cancel_btn = ui.Button()
-        cancel_btn.title = 'Cancel'
-        cancel_btn.font = ('<system-bold>', 20)
-        cancel_btn.background_color = '#8b0000'
-        cancel_btn.tint_color = 'white'
-        cancel_btn.corner_radius = 10
-        cancel_btn.frame = (width/2 - 100, height - 100, 200, 50)
-        cancel_btn.action = lambda sender: self.card_selector_view.close()
-        self.card_selector_view.add_subview(cancel_btn)
+        # Cancel
+        cancel = ui.Button(frame=(w/2-100, h-60, 200, 50))
+        cancel.title = 'Cancel'
+        cancel.background_color = '#8b0000'
+        cancel.tint_color = 'white'
+        cancel.font = ('<system-bold>', 20)
+        cancel.corner_radius = 10
+        cancel.action = lambda s: v.close()
+        v.add_subview(cancel)
 
-        return self.card_selector_view
+        return v
 
-    def select_hole_card(self, index):
-        """Select a hole card"""
-        def card_selected(card):
-            if index < len(self.hole_cards):
-                # Remove old card from used set
-                self.used_cards.discard(self.hole_cards[index])
-                self.hole_cards[index] = card
+    def select_hole_card(self, idx):
+        """Select hole card"""
+        def on_select(card):
+            if idx < len(self.hole_cards):
+                self.used_cards.discard(self.hole_cards[idx])
+                self.hole_cards[idx] = card
             else:
                 self.hole_cards.append(card)
 
             self.used_cards.add(card)
-            self.update_hole_card_display()
+            self.update_hole_display()
             self.card_selector_view.close()
-            self.analyze_hand()
+            self.analyze()
 
-        selector = self.build_card_selector(card_selected)
-        selector.present('sheet')
+        self.card_selector_view = self.build_card_selector(on_select)
+        self.card_selector_view.present('popover')
 
-    def select_community_card(self, index):
-        """Select a community card"""
-        def card_selected(card):
-            if index < len(self.community_cards):
-                # Remove old card from used set
-                self.used_cards.discard(self.community_cards[index])
-                self.community_cards[index] = card
+    def select_comm_card(self, idx):
+        """Select community card"""
+        def on_select(card):
+            if idx < len(self.community_cards):
+                self.used_cards.discard(self.community_cards[idx])
+                self.community_cards[idx] = card
             else:
                 self.community_cards.append(card)
 
             self.used_cards.add(card)
-            self.update_community_card_display()
+            self.update_comm_display()
             self.update_street()
             self.card_selector_view.close()
-            self.analyze_hand()
+            self.analyze()
 
-        selector = self.build_card_selector(card_selected)
-        selector.present('sheet')
+        self.card_selector_view = self.build_card_selector(on_select)
+        self.card_selector_view.present('popover')
 
-    def update_hole_card_display(self):
-        """Update hole card button displays"""
-        for i, btn in enumerate(self.hole_card_btns):
+    def update_hole_display(self):
+        """Update hole card buttons"""
+        suit_symbols = {'h': '♥️', 'd': '♦️', 'c': '♣️', 's': '♠️'}
+
+        for i, btn in enumerate(self.hole_btns):
             if i < len(self.hole_cards):
                 card = self.hole_cards[i]
-                btn.title = self.format_card_display(card)
+                btn.title = f"{card.rank}\n{suit_symbols[card.suit]}"
                 color = 'red' if card.suit in ['h', 'd'] else 'black'
                 btn.tint_color = color
-                btn.border_color = '#d4af37'
             else:
                 btn.title = '?'
                 btn.tint_color = 'black'
-                btn.border_color = '#d4af37'
 
-    def update_community_card_display(self):
-        """Update community card button displays"""
-        for i, btn in enumerate(self.comm_card_btns):
+    def update_comm_display(self):
+        """Update community card buttons"""
+        suit_symbols = {'h': '♥️', 'd': '♦️', 'c': '♣️', 's': '♠️'}
+
+        for i, btn in enumerate(self.comm_btns):
             if i < len(self.community_cards):
                 card = self.community_cards[i]
-                btn.title = self.format_card_display(card)
+                btn.title = f"{card.rank}\n{suit_symbols[card.suit]}"
                 color = 'red' if card.suit in ['h', 'd'] else 'black'
                 btn.tint_color = color
                 btn.border_color = '#d4af37'
@@ -432,72 +407,65 @@ class PokerAdvisorApp:
                 btn.tint_color = 'gray'
                 btn.border_color = 'gray'
 
-    def format_card_display(self, card):
-        """Format card for display with suit symbol"""
-        suit_symbols = {'h': '♥️', 'd': '♦️', 'c': '♣️', 's': '♠️'}
-        return f"{card.rank}\n{suit_symbols[card.suit]}"
-
     def update_street(self):
-        """Update the current street based on community cards"""
-        num_comm = len(self.community_cards)
-        if num_comm == 0:
+        """Update street label"""
+        n = len(self.community_cards)
+        if n == 0:
             self.street = 'preflop'
             self.street_label.text = '🎴 PRE-FLOP'
-        elif num_comm == 3:
+        elif n == 3:
             self.street = 'flop'
             self.street_label.text = '🎴 FLOP'
-        elif num_comm == 4:
+        elif n == 4:
             self.street = 'turn'
             self.street_label.text = '🎴 TURN'
-        elif num_comm == 5:
+        elif n == 5:
             self.street = 'river'
             self.street_label.text = '🎴 RIVER'
 
-    def analyze_hand(self):
-        """Analyze current hand and update recommendations"""
+    def analyze(self):
+        """Analyze hand and show recommendation"""
         if len(self.hole_cards) != 2:
-            self.recommendation_label.text = 'Select your hole cards'
+            self.rec_label.text = 'Select 2 hole cards'
             return
 
-        # Calculate equity
         try:
             if len(self.community_cards) == 0:
-                # Pre-flop: use quick estimate
-                preflop_strength = self.strategy.get_preflop_hand_strength(self.hole_cards)
-                self.equity_display.text = f"{preflop_strength}%"
+                # Pre-flop
+                strength = self.strategy.get_preflop_hand_strength(self.hole_cards)
+                self.equity_label.text = f"{strength}%"
 
-                # Mock equity data for strategy
                 equity_data = {
-                    'equity': preflop_strength,
-                    'win_pct': preflop_strength,
+                    'equity': strength,
+                    'win_pct': strength,
                     'tie_pct': 0,
-                    'lose_pct': 100 - preflop_strength,
+                    'lose_pct': 100 - strength,
                     'current_hand': 'Hole Cards',
                     'hand_strength': 'Pre-flop'
                 }
             else:
-                # Post-flop: run simulation
+                # Post-flop
                 equity_data = self.equity_calc.quick_equity(
                     self.hole_cards,
                     self.community_cards,
                     self.num_opponents,
                     simulations=500
                 )
-                self.equity_display.text = f"{equity_data['win_pct']}%"
+                self.equity_label.text = f"{equity_data['win_pct']}%"
 
-            # Update equity color
+            # Color code equity
             if equity_data['win_pct'] >= 60:
-                self.equity_display.text_color = '#00ff00'  # Green
+                self.equity_label.text_color = '#00ff00'
             elif equity_data['win_pct'] >= 40:
-                self.equity_display.text_color = '#ffff00'  # Yellow
+                self.equity_label.text_color = '#ffff00'
             else:
-                self.equity_display.text_color = '#ff6600'  # Orange
+                self.equity_label.text_color = '#ff6600'
 
-            # Update hand strength
-            self.hand_strength_label.text = equity_data['current_hand']
+            # Update hand
+            self.hand_label.text = equity_data['current_hand']
 
             # Get recommendation
-            recommendation = self.strategy.get_recommendation(
+            rec = self.strategy.get_recommendation(
                 equity_data,
                 self.position,
                 self.num_opponents,
@@ -505,40 +473,39 @@ class PokerAdvisorApp:
                 self.facing_bet
             )
 
-            # Display recommendation
-            self.recommendation_label.text = f"⚡ {recommendation['action']}"
+            self.rec_label.text = f"⚡ {rec['action']}"
 
         except Exception as e:
-            self.recommendation_label.text = f"Error: {str(e)}"
+            self.rec_label.text = f"Error: {str(e)}"
 
     def cycle_position(self, sender):
-        """Cycle through positions"""
+        """Cycle position"""
         positions = ['BTN', 'SB', 'BB', 'CO']
-        current_idx = positions.index(self.position)
-        self.position = positions[(current_idx + 1) % len(positions)]
+        idx = positions.index(self.position)
+        self.position = positions[(idx + 1) % 4]
         self.position_btn.title = self.position
-        self.analyze_hand()
+        self.analyze()
 
     def adjust_opponents(self, delta):
-        """Adjust number of opponents"""
+        """Adjust opponents"""
         self.num_opponents = max(1, min(3, self.num_opponents + delta))
-        self.opp_count_label.text = str(self.num_opponents)
-        self.analyze_hand()
+        self.opp_label.text = str(self.num_opponents)
+        self.analyze()
 
     def toggle_facing_bet(self, sender):
-        """Toggle facing bet status"""
+        """Toggle facing bet"""
         self.facing_bet = sender.value
-        self.analyze_hand()
+        self.analyze()
 
     def new_hand(self, sender):
-        """Reset for new hand"""
-        # Rotate position (dealer button moves)
+        """New hand"""
+        # Rotate position
         positions = ['BTN', 'SB', 'BB', 'CO']
-        current_idx = positions.index(self.position)
-        self.position = positions[(current_idx + 1) % len(positions)]
+        idx = positions.index(self.position)
+        self.position = positions[(idx + 1) % 4]
         self.position_btn.title = self.position
 
-        # Clear cards
+        # Clear
         self.hole_cards = []
         self.community_cards = []
         self.used_cards = set()
@@ -546,95 +513,83 @@ class PokerAdvisorApp:
         self.facing_bet = False
         self.bet_switch.value = False
 
-        # Reset displays
-        self.update_hole_card_display()
-        self.update_community_card_display()
+        # Reset display
+        self.update_hole_display()
+        self.update_comm_display()
         self.update_street()
-        self.equity_display.text = '--%'
-        self.equity_display.text_color = '#00ff00'
-        self.hand_strength_label.text = 'No hand yet'
-        self.recommendation_label.text = 'Select your hole cards to begin'
+        self.equity_label.text = '--%'
+        self.equity_label.text_color = '#00ff00'
+        self.hand_label.text = 'Select your cards'
+        self.rec_label.text = 'Input your hole cards'
 
     def show_settings(self, sender):
-        """Show opponent tendency settings"""
-        settings_view = ui.View()
-        settings_view.name = 'Opponent Settings'
-        settings_view.background_color = '#1a472a'
-
-        width = 600
-        height = 400
-
-        y_offset = 30
+        """Show settings"""
+        v = ui.View()
+        v.name = 'Settings'
+        v.background_color = '#1a472a'
+        v.frame = (0, 0, 600, 350)
 
         # Title
-        title = ui.Label()
+        title = ui.Label(frame=(0, 20, 600, 40))
         title.text = 'OPPONENT TENDENCIES'
-        title.font = ('<system-bold>', 24)
         title.text_color = 'white'
+        title.font = ('<system-bold>', 24)
         title.alignment = ui.ALIGN_CENTER
-        title.frame = (0, y_offset, width, 40)
-        settings_view.add_subview(title)
-        y_offset += 60
+        v.add_subview(title)
 
-        # Tightness slider
-        tight_label = ui.Label()
-        tight_label.text = 'Playing Style: LOOSE ← → TIGHT'
-        tight_label.font = ('<system-bold>', 18)
-        tight_label.text_color = 'white'
-        tight_label.alignment = ui.ALIGN_CENTER
-        tight_label.frame = (20, y_offset, width-40, 30)
-        settings_view.add_subview(tight_label)
-        y_offset += 40
+        y = 80
 
-        tight_slider = ui.Slider()
+        # Tightness
+        lbl1 = ui.Label(frame=(20, y, 560, 30))
+        lbl1.text = 'LOOSE ← → TIGHT'
+        lbl1.text_color = 'white'
+        lbl1.font = ('<system-bold>', 18)
+        lbl1.alignment = ui.ALIGN_CENTER
+        v.add_subview(lbl1)
+
+        tight_slider = ui.Slider(frame=(50, y+40, 500, 40))
         tight_slider.value = self.strategy.opponent_tightness
-        tight_slider.frame = (50, y_offset, width-100, 40)
-        settings_view.add_subview(tight_slider)
-        y_offset += 60
+        v.add_subview(tight_slider)
 
-        # Aggression slider
-        agg_label = ui.Label()
-        agg_label.text = 'Betting Style: PASSIVE ← → AGGRESSIVE'
-        agg_label.font = ('<system-bold>', 18)
-        agg_label.text_color = 'white'
-        agg_label.alignment = ui.ALIGN_CENTER
-        agg_label.frame = (20, y_offset, width-40, 30)
-        settings_view.add_subview(agg_label)
-        y_offset += 40
+        y += 100
 
-        agg_slider = ui.Slider()
+        # Aggression
+        lbl2 = ui.Label(frame=(20, y, 560, 30))
+        lbl2.text = 'PASSIVE ← → AGGRESSIVE'
+        lbl2.text_color = 'white'
+        lbl2.font = ('<system-bold>', 18)
+        lbl2.alignment = ui.ALIGN_CENTER
+        v.add_subview(lbl2)
+
+        agg_slider = ui.Slider(frame=(50, y+40, 500, 40))
         agg_slider.value = self.strategy.opponent_aggression
-        agg_slider.frame = (50, y_offset, width-100, 40)
-        settings_view.add_subview(agg_slider)
-        y_offset += 80
+        v.add_subview(agg_slider)
 
-        # Save button
-        def save_settings(sender):
+        # Save
+        def save(s):
             self.strategy.update_opponent_tendencies(
                 tight_slider.value,
                 agg_slider.value
             )
-            self.analyze_hand()  # Re-analyze with new settings
-            settings_view.close()
+            self.analyze()
+            v.close()
 
-        save_btn = ui.Button()
-        save_btn.title = '✓ Save & Apply'
-        save_btn.font = ('<system-bold>', 20)
+        save_btn = ui.Button(frame=(200, 280, 200, 50))
+        save_btn.title = '✓ Save'
         save_btn.background_color = '#006400'
         save_btn.tint_color = 'white'
+        save_btn.font = ('<system-bold>', 20)
         save_btn.corner_radius = 10
-        save_btn.frame = (width/2 - 100, y_offset, 200, 50)
-        save_btn.action = save_settings
-        settings_view.add_subview(save_btn)
+        save_btn.action = save
+        v.add_subview(save_btn)
 
-        settings_view.present('popover')
+        v.present('popover')
 
     def run(self):
-        """Run the application"""
-        self.main_view.present('fullscreen')
+        """Run the app"""
+        self.main_view.present('fullscreen', hide_title_bar=False)
 
 
-# Run the app
 if __name__ == '__main__':
     app = PokerAdvisorApp()
     app.run()
