@@ -542,51 +542,55 @@ class PokerAdvisorApp:
         self.rec_lbl.text = 'Tap the ? buttons above\nto select your cards'
 
     def show_settings(self, sender):
-        """Show settings"""
+        """Show settings - FULLSCREEN"""
         v = ui.View()
         v.name = 'Opponent Settings'
         v.background_color = '#1a472a'
 
-        w = 650
-        h = 400
+        # FULL SCREEN
+        screen = ui.get_screen_size()
+        w = screen[0]
+        h = screen[1]
 
         # Title
-        settings_title = ui.Label(frame=(0, 30, w, 50))
-        settings_title.text = 'OPPONENT TENDENCIES'
+        settings_title = ui.Label(frame=(0, 80, w, 60))
+        settings_title.text = '⚙️ OPPONENT TENDENCIES ⚙️'
         settings_title.text_color = 'white'
-        settings_title.font = ('<system-bold>', 28)
+        settings_title.font = ('<system-bold>', 36)
         settings_title.alignment = ui.ALIGN_CENTER
         v.add_subview(settings_title)
 
-        y = 100
+        y = 200
 
         # Tightness label
-        tight_label = ui.Label(frame=(30, y, w-60, 35))
+        tight_label = ui.Label(frame=(40, y, w-80, 50))
         tight_label.text = 'Playing Style: LOOSE ← → TIGHT'
         tight_label.text_color = 'white'
-        tight_label.font = ('<system-bold>', 20)
+        tight_label.font = ('<system-bold>', 26)
         tight_label.alignment = ui.ALIGN_CENTER
         v.add_subview(tight_label)
 
-        tight_slider = ui.Slider(frame=(60, y+45, w-120, 40))
+        tight_slider = ui.Slider(frame=(80, y+70, w-160, 50))
         tight_slider.value = self.strategy.opponent_tightness
         v.add_subview(tight_slider)
 
-        y += 110
+        y += 180
 
         # Aggression label
-        agg_label = ui.Label(frame=(30, y, w-60, 35))
+        agg_label = ui.Label(frame=(40, y, w-80, 50))
         agg_label.text = 'Betting Style: PASSIVE ← → AGGRESSIVE'
         agg_label.text_color = 'white'
-        agg_label.font = ('<system-bold>', 20)
+        agg_label.font = ('<system-bold>', 26)
         agg_label.alignment = ui.ALIGN_CENTER
         v.add_subview(agg_label)
 
-        agg_slider = ui.Slider(frame=(60, y+45, w-120, 40))
+        agg_slider = ui.Slider(frame=(80, y+70, w-160, 50))
         agg_slider.value = self.strategy.opponent_aggression
         v.add_subview(agg_slider)
 
-        # Save button
+        y += 200
+
+        # Save button - HUGE
         def save(s):
             self.strategy.update_opponent_tendencies(
                 tight_slider.value,
@@ -595,16 +599,28 @@ class PokerAdvisorApp:
             self.analyze()
             v.close()
 
-        save_btn = ui.Button(frame=(w/2-140, h-80, 280, 60))
+        save_btn = ui.Button(frame=(w/2-200, y, 400, 80))
         save_btn.title = '✓ Save & Update'
         save_btn.background_color = '#006400'
         save_btn.tint_color = 'white'
-        save_btn.font = ('<system-bold>', 24)
-        save_btn.corner_radius = 12
+        save_btn.font = ('<system-bold>', 32)
+        save_btn.corner_radius = 15
         save_btn.action = save
         v.add_subview(save_btn)
 
-        v.present('sheet')
+        y += 100
+
+        # Cancel button - HUGE
+        cancel_btn = ui.Button(frame=(w/2-200, y, 400, 80))
+        cancel_btn.title = '✖ Cancel'
+        cancel_btn.background_color = '#8b0000'
+        cancel_btn.tint_color = 'white'
+        cancel_btn.font = ('<system-bold>', 32)
+        cancel_btn.corner_radius = 15
+        cancel_btn.action = lambda s: v.close()
+        v.add_subview(cancel_btn)
+
+        v.present('fullscreen')
 
     def run(self):
         """Run the app"""
