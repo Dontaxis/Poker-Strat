@@ -266,76 +266,98 @@ class PokerAdvisorApp:
         scroll.content_size = (w, y + 20)
 
     def build_card_selector(self, callback):
-        """Build MUCH BIGGER card selection popup"""
+        """Build FULL SCREEN card selector with scrolling"""
         v = ui.View()
         v.name = 'Select Card'
         v.background_color = '#1a472a'
 
-        # Make it MUCH BIGGER - use most of screen
+        # FULL SCREEN
         screen = ui.get_screen_size()
-        w = min(screen[0] - 40, 950)
-        h = min(screen[1] - 100, 700)
+        w = screen[0]
+        h = screen[1]
 
-        # Title
-        selector_title = ui.Label(frame=(0, 15, w, 50))
-        selector_title.text = 'TAP TO SELECT CARD'
+        # Add ScrollView so everything is visible
+        scroll = ui.ScrollView(frame=(0, 0, w, h))
+        scroll.background_color = '#1a472a'
+        v.add_subview(scroll)
+
+        y = 20
+
+        # Title - HUGE
+        selector_title = ui.Label(frame=(0, y, w, 60))
+        selector_title.text = '♠️ TAP TO SELECT CARD ♥️'
         selector_title.text_color = 'white'
-        selector_title.font = ('<system-bold>', 32)
+        selector_title.font = ('<system-bold>', 36)
         selector_title.alignment = ui.ALIGN_CENTER
-        v.add_subview(selector_title)
+        scroll.add_subview(selector_title)
+        y += 80
 
-        # Card grid with MUCH BIGGER buttons
+        # Card grid with HUGE buttons
         ranks = list(Card.RANKS)
         suits = ['♥️', '♦️', '♣️', '♠️']
         suit_chars = ['h', 'd', 'c', 's']
         suit_colors = ['red', 'red', 'black', 'black']
 
-        # BIGGER cards and spacing
-        card_size = 68
-        card_spacing = 2
-        y_start = 80
-        row_height = 110
+        # MASSIVE cards - easy to see and tap
+        card_w = 90
+        card_h = 120
+        card_gap = 5
 
         for suit_idx, (symbol, char, color) in enumerate(zip(suits, suit_chars, suit_colors)):
-            # Suit label - MUCH BIGGER
-            suit_lbl = ui.Label(frame=(10, y_start + suit_idx*row_height, 65, 80))
+            # Suit label - HUGE
+            suit_lbl = ui.Label(frame=(20, y + 40, 80, 80))
             suit_lbl.text = symbol
             suit_lbl.text_color = color
-            suit_lbl.font = ('<system>', 54)
+            suit_lbl.font = ('<system>', 72)
             suit_lbl.alignment = ui.ALIGN_CENTER
-            v.add_subview(suit_lbl)
+            scroll.add_subview(suit_lbl)
 
-            # Cards - MUCH BIGGER with suit symbols
-            x_start = 85
+            # Cards in this suit - HUGE buttons
+            x_start = 110
             for rank_idx, rank in enumerate(ranks):
                 card = Card(rank, char)
                 if card in self.used_cards:
                     continue
 
-                btn = ui.Button(frame=(x_start + rank_idx*(card_size+card_spacing),
-                                      y_start + suit_idx*row_height,
-                                      card_size, card_size))
+                # Calculate position (wrap to multiple rows if needed)
+                col = rank_idx % 7  # 7 cards per row
+                row = rank_idx // 7
+
+                x_pos = x_start + col * (card_w + card_gap)
+                y_pos = y + row * (card_h + card_gap)
+
+                btn = ui.Button(frame=(x_pos, y_pos, card_w, card_h))
                 btn.title = f"{rank}\n{symbol}"
                 btn.background_color = 'white'
                 btn.tint_color = color
-                btn.font = ('<system-bold>', 20)
-                btn.corner_radius = 8
+                btn.font = ('<system-bold>', 28)
+                btn.corner_radius = 10
+                btn.border_width = 2
+                btn.border_color = '#d4af37'
 
                 def make_action(c):
                     return lambda s: callback(c)
 
                 btn.action = make_action(card)
-                v.add_subview(btn)
+                scroll.add_subview(btn)
 
-        # Cancel button - MUCH BIGGER at bottom
-        cancel_btn = ui.Button(frame=(w/2-150, h-75, 300, 65))
-        cancel_btn.title = 'Cancel'
+            # Space between suits (13 cards = 2 rows)
+            y += 2 * (card_h + card_gap) + 30
+
+        # Cancel button - HUGE at bottom
+        cancel_btn = ui.Button(frame=(w/2-200, y, 400, 80))
+        cancel_btn.title = '✖ Cancel'
         cancel_btn.background_color = '#8b0000'
         cancel_btn.tint_color = 'white'
-        cancel_btn.font = ('<system-bold>', 28)
-        cancel_btn.corner_radius = 12
+        cancel_btn.font = ('<system-bold>', 32)
+        cancel_btn.corner_radius = 15
         cancel_btn.action = lambda s: v.close()
-        v.add_subview(cancel_btn)
+        scroll.add_subview(cancel_btn)
+
+        y += 100
+
+        # Set scroll content size
+        scroll.content_size = (w, y)
 
         return v
 
@@ -354,7 +376,7 @@ class PokerAdvisorApp:
             self.analyze()
 
         self.card_selector_view = self.build_card_selector(on_select)
-        self.card_selector_view.present('sheet')
+        self.card_selector_view.present('fullscreen')
 
     def select_comm_card(self, idx):
         """Select community card"""
@@ -372,7 +394,7 @@ class PokerAdvisorApp:
             self.analyze()
 
         self.card_selector_view = self.build_card_selector(on_select)
-        self.card_selector_view.present('sheet')
+        self.card_selector_view.present('fullscreen')
 
     def update_hole_display(self):
         """Update hole card buttons"""
