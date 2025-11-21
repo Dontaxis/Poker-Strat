@@ -403,7 +403,7 @@ class PokerAdvisorApp:
         for i, btn in enumerate(self.hole_btns):
             if i < len(self.hole_cards):
                 card = self.hole_cards[i]
-                btn.title = f"{card.rank}\n{suit_symbols[card.suit]}"
+                btn.title = f"{card.rank}{suit_symbols[card.suit]}"
                 color = 'red' if card.suit in ['h', 'd'] else 'black'
                 btn.tint_color = color
             else:
@@ -417,7 +417,7 @@ class PokerAdvisorApp:
         for i, btn in enumerate(self.comm_btns):
             if i < len(self.community_cards):
                 card = self.community_cards[i]
-                btn.title = f"{card.rank}\n{suit_symbols[card.suit]}"
+                btn.title = f"{card.rank}{suit_symbols[card.suit]}"
                 color = 'red' if card.suit in ['h', 'd'] else 'black'
                 btn.tint_color = color
                 btn.border_color = '#d4af37'
