@@ -22,6 +22,7 @@ class PokerAdvisorApp:
         self.num_opponents = 3
         self.street = 'preflop'
         self.facing_bet = False
+        self.preflop_raise = False
         self.used_cards = set()
 
         self.main_view = None
@@ -54,8 +55,8 @@ class PokerAdvisorApp:
         scroll.add_subview(title)
         y += 60
 
-        # POSITION & OPPONENTS
-        controls = ui.View(frame=(20, y, w-40, 140))
+        # POSITION & OPPONENTS & SETTINGS - EXPANDED
+        controls = ui.View(frame=(20, y, w-40, 340))
         controls.background_color = '#0d2818'
         controls.corner_radius = 10
         scroll.add_subview(controls)
@@ -118,19 +119,62 @@ class PokerAdvisorApp:
         self.street_lbl.alignment = ui.ALIGN_CENTER
         controls.add_subview(self.street_lbl)
 
-        # Facing bet label
-        bet_label = ui.Label(frame=(20, 110, 140, 25))
+        # Toggles row
+        bet_label = ui.Label(frame=(20, 115, 140, 20))
         bet_label.text = 'Facing Bet?'
         bet_label.text_color = 'white'
-        bet_label.font = ('<system>', 16)
+        bet_label.font = ('<system>', 15)
         controls.add_subview(bet_label)
 
-        self.bet_switch = ui.Switch(frame=(170, 108, 60, 30))
+        self.bet_switch = ui.Switch(frame=(20, 138, 60, 30))
         self.bet_switch.value = False
         self.bet_switch.action = self.toggle_facing_bet
         controls.add_subview(self.bet_switch)
 
-        y += 155
+        # Pre-flop raiser toggle
+        preflop_raise_label = ui.Label(frame=(110, 115, 180, 20))
+        preflop_raise_label.text = 'Opp Raised Pre-flop?'
+        preflop_raise_label.text_color = 'white'
+        preflop_raise_label.font = ('<system>', 15)
+        controls.add_subview(preflop_raise_label)
+
+        self.preflop_raise_switch = ui.Switch(frame=(110, 138, 60, 30))
+        self.preflop_raise_switch.value = False
+        self.preflop_raise_switch.action = self.toggle_preflop_raise
+        controls.add_subview(self.preflop_raise_switch)
+
+        # OPPONENT TENDENCY SLIDERS
+        slider_y = 185
+
+        # Tightness slider
+        tight_lbl = ui.Label(frame=(20, slider_y, w-80, 25))
+        tight_lbl.text = 'Opponent Style:  LOOSE ← → TIGHT'
+        tight_lbl.text_color = 'white'
+        tight_lbl.font = ('<system-bold>', 16)
+        tight_lbl.alignment = ui.ALIGN_CENTER
+        controls.add_subview(tight_lbl)
+
+        self.tight_slider = ui.Slider(frame=(40, slider_y+30, w-120, 40))
+        self.tight_slider.value = self.strategy.opponent_tightness
+        self.tight_slider.action = self.update_opponent_sliders
+        controls.add_subview(self.tight_slider)
+
+        slider_y += 85
+
+        # Aggression slider
+        agg_lbl = ui.Label(frame=(20, slider_y, w-80, 25))
+        agg_lbl.text = 'Opponent Betting:  PASSIVE ← → AGGRESSIVE'
+        agg_lbl.text_color = 'white'
+        agg_lbl.font = ('<system-bold>', 16)
+        agg_lbl.alignment = ui.ALIGN_CENTER
+        controls.add_subview(agg_lbl)
+
+        self.agg_slider = ui.Slider(frame=(40, slider_y+30, w-120, 40))
+        self.agg_slider.value = self.strategy.opponent_aggression
+        self.agg_slider.action = self.update_opponent_sliders
+        controls.add_subview(self.agg_slider)
+
+        y += 355
 
         # HOLE CARDS SECTION
         hole_title = ui.Label(frame=(0, y, w, 35))
@@ -240,23 +284,12 @@ class PokerAdvisorApp:
 
         y += 335
 
-        # ACTION BUTTONS - BIGGER
-        btn_w = (w - 60) / 2
-
-        settings_btn = ui.Button(frame=(20, y, btn_w, 70))
-        settings_btn.title = '⚙️ Opponent Settings'
-        settings_btn.background_color = '#4a4a4a'
-        settings_btn.tint_color = 'white'
-        settings_btn.font = ('<system-bold>', 22)
-        settings_btn.corner_radius = 12
-        settings_btn.action = self.show_settings
-        scroll.add_subview(settings_btn)
-
-        new_btn = ui.Button(frame=(40 + btn_w, y, btn_w, 70))
+        # ACTION BUTTON - NEW HAND
+        new_btn = ui.Button(frame=(20, y, w-40, 70))
         new_btn.title = '🔄 New Hand'
         new_btn.background_color = '#006400'
         new_btn.tint_color = 'white'
-        new_btn.font = ('<system-bold>', 22)
+        new_btn.font = ('<system-bold>', 24)
         new_btn.corner_radius = 12
         new_btn.action = self.new_hand
         scroll.add_subview(new_btn)
@@ -516,6 +549,19 @@ class PokerAdvisorApp:
         self.facing_bet = sender.value
         self.analyze()
 
+    def toggle_preflop_raise(self, sender):
+        """Toggle pre-flop raise"""
+        self.preflop_raise = sender.value
+        self.analyze()
+
+    def update_opponent_sliders(self, sender):
+        """Update opponent tendencies from sliders"""
+        self.strategy.update_opponent_tendencies(
+            self.tight_slider.value,
+            self.agg_slider.value
+        )
+        self.analyze()
+
     def new_hand(self, sender):
         """New hand"""
         # Rotate position
@@ -531,6 +577,8 @@ class PokerAdvisorApp:
         self.street = 'preflop'
         self.facing_bet = False
         self.bet_switch.value = False
+        self.preflop_raise = False
+        self.preflop_raise_switch.value = False
 
         # Reset display
         self.update_hole_display()
